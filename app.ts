@@ -3,7 +3,7 @@ import cors from "cors";
 import express, { Express, Request, Response } from "express";
 import path from "path";
 const userConfig = require("./app/config/index");
-// import { socketConnection } from "./app/socket";
+import { socketConnection } from "./app/socket";
 const http = require("http");
 const app: Express = express();
 app.use((_req, res, next) => {
@@ -43,9 +43,9 @@ require("./app/routes/users/companyProfile")(app);
 require("./app/routes/settings/printerConfigurations")(app);
 require("./app/routes/users/login")(app);
 require("./app/routes/users/profileSettings")(app);
-// const server = http.createServer(app);
-// server.maxConnections = 1000;
-// socketConnection(server);
+const server = http.createServer(app);
+server.maxConnections = 1000;
+socketConnection(server);
 app.listen(userConfig.config.server.users, () => {
   console.log(`Connected.... ${userConfig.config.server.users}`);
 });
