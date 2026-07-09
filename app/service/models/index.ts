@@ -10,8 +10,7 @@ export const initDB = async (mongodbURI: string) => {
       dashboardcard: require("./users/dashboardCard")(connection),
     };
     await seed(db);
-    // console.log("Seed", seedRes);
-    
+    await patchMissingCards(db);
 
     return db;
   });
@@ -50,7 +49,16 @@ export const seed = async (db: any) => {
         description: "Access template",
         default: true,
       },
-      
+      {
+        name: "traceability",
+        description: "Access traceability module",
+        default: true,
+      },
+      {
+        name: "audit-traceability",
+        description: "Access audit traceability module",
+        default: true,
+      },
     ];
 
     const dashboardCards = await db.dashboardcard.insertMany(dashboardCardData);
@@ -64,7 +72,9 @@ export const seed = async (db: any) => {
           dashboardCards[1].id,
           dashboardCards[2].id,
           dashboardCards[3].id,
-          dashboardCards[4].id
+          dashboardCards[4].id,
+          dashboardCards[5].id,
+          dashboardCards[6].id,
         ],
         defaultRole: true,
       },
@@ -76,7 +86,10 @@ export const seed = async (db: any) => {
           dashboardCards[1].id,
           dashboardCards[2].id,
           dashboardCards[3].id,
-          dashboardCards[4].id],
+          dashboardCards[4].id,
+          dashboardCards[5].id,
+          dashboardCards[6].id,
+        ],
         defaultRole: true,
         isDeleted: false
       },
@@ -169,5 +182,31 @@ export const seed = async (db: any) => {
   } catch (error) {
     console.log("errrrrrrrrrrrrrrrrrrrrrr", error);
     return { status: false, message: "Data-Seed-Error" };
+  }
+};
+
+// Runs every startup — adds missing dashboard cards and grants them to
+// Super Admin / Admin roles so already-seeded databases stay up to date.
+export const patchMissingCards = async (db: any) => {
+  try {
+    const required = [
+      { name: "traceability", description: "Access traceability module" },
+      { name: "audit-traceability", description: "Access audit traceability module" },
+    ];
+
+    for (const card of required) {
+      let existing = await db.dashboardcard.findOne({ name: card.name });
+      if (!existing) {
+        existing = await db.dashboardcard.create({ name: card.name, description: card.description, default: true });
+        console.log(`Patched missing dashboard card: ${card.name}`);
+      }
+      // Grant to all default admin-level roles
+      await db.roles.updateMany(
+        { name: { $in: ["Super Admin", "Admin"] }, rolePermission: { $ne: existing.id } },
+        { $addToSet: { rolePermission: existing.id } }
+      );
+    }
+  } catch (error) {
+    console.log("patchMissingCards error:", error);
   }
 };

@@ -38,7 +38,6 @@ RUN apt-get update && apt-get install -y \
 ENV NODE_ENV=production
 
 # Expose your app's port
-EXPOSE 8112
+EXPOSE 8111
 
-# Start the app
 CMD ["node", "dist/app.js"]
